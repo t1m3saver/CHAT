@@ -1,7 +1,11 @@
 DROP DATABASE IF EXISTS chat_app;
-
 CREATE DATABASE IF NOT EXISTS chat_app;
 USE chat_app;
+
+CREATE USER 'chatDBUser'@'%' IDENTIFIED BY 'dbpasswd123!';
+GRANT ALL PRIVILEGES ON chat_app.* TO 'chatDBUser'@'%';
+FLUSH PRIVILEGES;
+
 
 create table user (
  userId int auto_increment primary key,

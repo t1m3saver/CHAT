@@ -10,8 +10,7 @@
 int main() {
     CHAT::Utils::Module::ModuleLoader loader;
     CHAT::Utils::Json::JsonUtils jsonUtils;
-    std::filesystem::path execPath = std::filesystem::current_path();
-    std::string moduleConfigPath = (execPath / "../../configs/ModuleDefine.json").string();
+    std::string moduleConfigPath = ("/code/CHAT/configs/ModuleDefine.json");
     CHAT::Utils::Json::JsonValue jsonValue = jsonUtils.loadFromFile(moduleConfigPath);
     std::vector<std::string> modules;
     if (jsonValue.isMember("modules") && jsonValue["modules"].isArray()) {

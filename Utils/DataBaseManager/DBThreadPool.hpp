@@ -1,24 +1,29 @@
-#include "mysql/mysql.h"
+#include <thread>
+#include <queue>
+#include <functional>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 namespace CHAT::Utils::DataBaseManager {
 class DBThreadPool {
 public:
-    DBThreadPool& instance();
+    explicit DBThreadPool(const int& threadNum);
 
-    DBThreadPool(const DBThreadPool&) = delete;
+    ~DBThreadPool();
 
-    DBThreadPool& operator=(const DBThreadPool&) = delete;
+    void start();
 
-    DBThreadPool& operator=(DBThreadPool&&) = delete;
+    void stop();
 
-    DBThreadPool& operator=(const DBThreadPool&) = delete;
-
-    DBThreadPool(DBThreadPool&&) = delete;
-
-    ~DBThreadPool() = default;
+    void addTask(std::function<void()> task);
 
 private:
-    DBThreadPool() = default;
-
+    int m_threadNum;
+    std::vector<std::thread> m_workers;    
+    std::queue<std::function<void()>> m_tasks;
+    std::mutex m_queueMutex;
+    std::condition_variable m_condition;
+    std::atomic<bool> m_running;
 };    
 }
