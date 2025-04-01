@@ -2,6 +2,7 @@
 #include "DBManager.hpp"
 #include "JsonUtils/JsonUtils.hpp"
 #include <iostream>
+#include <future>
 
 namespace CHAT::Utils::DataBaseManager {
 DBManager::DBManager(const std::string& appName) : m_appName(appName)
@@ -19,10 +20,11 @@ DBManager::DBManager(const std::string& appName) : m_appName(appName)
     int defaultConnections = config["features"]["default_connections"].asInt();
     int defaultThreadNumber = config["features"]["default_threadNumber"].asInt();
     try {
-        m_connectionPool = std::make_unique<DBConnectionPool>(
-            host, port, dbUser, dbPassword, dbName, defaultConnections);
 
         m_threadPool = std::make_unique<DBThreadPool>(defaultThreadNumber);
+
+        m_connectionPool = std::make_unique<DBConnectionPool>(
+            host, port, dbUser, dbPassword, dbName, defaultConnections);
         
         m_threadPool->start();
 
@@ -32,41 +34,54 @@ DBManager::DBManager(const std::string& appName) : m_appName(appName)
     }
 }
 
-bool DBManager::excuteQuery(const std::string& sql, std::function<void(MYSQL_RES*)> callback)
+std::future<std::shared_ptr<MYSQL_RES>> DBManager::excuteQuery(const std::string& sql)
 {
     if (!m_threadPool || !m_connectionPool) {
         throw std::runtime_error("DBManager not initialized properly");
     }
 
-    auto task = [this, sql, callback]() {
+    auto promise = std::make_shared<std::promise<std::shared_ptr<MYSQL_RES>>>();
+    auto task = [this, sql, promise]() {
         try {
             auto conn = m_connectionPool->getConnection();
-
             if (mysql_query(conn.get(), sql.c_str())) { 
+                promise->set_value(nullptr);
                 std::cerr << "SQL Error: " << mysql_error(conn.get()) << std::endl;
-                return false;
-            } else {
-                std::cout << "Query executed: " << sql << std::endl;
+                return;
             }
-            MYSQL_RES* res = mysql_store_result(conn.get());
-            if (callback) {
-                callback(res);
+            std::cout << "Query executed: " << sql << std::endl;
+
+            MYSQL_RES* raw_res = mysql_store_result(conn.get());
+            if (!raw_res) {
+                promise->set_value(nullptr);
+                std::cerr << "Error storing result: " << mysql_error(conn.get()) << std::endl;
+                return;
             }
-            if (res) {
-                mysql_free_result(res);
-            }
+            auto res = std::shared_ptr<MYSQL_RES>(raw_res, [](MYSQL_RES* r) { mysql_free_result(r); });
+            promise->set_value(res);
+
         } catch (const std::exception& e) {
+            promise->set_value(nullptr);
             std::cerr << "Exception in SQL execution: " << e.what() << std::endl;
         }
     };
-    m_threadPool->addTask(task);
-    return true;
+
+    m_threadPool->addTask(std::move(task));
+    return promise->get_future();
 }
+
 
 DBManager::~DBManager()
 {
+    std::cout << "Destroying DBManager, cleaning up resources" << std::endl;
     if (m_threadPool) {
         m_threadPool->stop();
+        std::cout << "Thread pool stopped." << std::endl;
+    }
+
+    if (m_connectionPool) {
+        std::cout << "Destroying connection pool" << std::endl;
+        m_connectionPool.reset(); 
     }
 }
 }

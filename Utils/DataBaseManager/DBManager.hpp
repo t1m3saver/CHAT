@@ -3,6 +3,7 @@
 #include "DBThreadPool.hpp"
 #include "DBConnectionPool.hpp"
 #include <functional>
+#include <future>
 
 namespace CHAT::Utils::DataBaseManager {
 class DBManager {
@@ -19,7 +20,7 @@ public:
 
     ~DBManager();
 
-    bool excuteQuery(const std::string& sql, std::function<void(MYSQL_RES*)> callback);
+    std::future<std::shared_ptr<MYSQL_RES>> excuteQuery(const std::string& sql);
 
 private:
     std::string m_appName;

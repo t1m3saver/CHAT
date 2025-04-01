@@ -12,8 +12,8 @@
       "enable_logging": true,
       "max_connections": 100,
       "max_threadNumber": 100,
-      "default_connections" : 1,
-      "default_threadNumber" : 1
+      "default_connections" : 10,
+      "default_threadNumber" : 10
     }
   }
   

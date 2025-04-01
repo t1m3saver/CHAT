@@ -18,32 +18,6 @@ DBConnectionPool::DBConnectionPool(const char* host, int port, const char* user,
                 mysql_close(conn);
                 throw std::runtime_error("MySQL connect failed: " + std::string(mysql_error(conn)));
             }
-            // bug fix
-            const char *query = "SELECT * FROM user"; // 替换为实际的表名
-            if (mysql_query(conn, query)) {
-                std::cerr << "SELECT query failed: " << mysql_error(conn) << std::endl;
-                mysql_close(conn);
-                return;
-            }
-
-            // 获取查询结果
-            MYSQL_RES *result = mysql_store_result(conn);
-            if (result == nullptr) {
-                std::cerr << "mysql_store_result() failed: " << mysql_error(conn) << std::endl;
-                mysql_close(conn);
-                return;
-            }
-
-            // 输出查询结果
-            int num_fields = mysql_num_fields(result);
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(result))) {
-                for (int i = 0; i < num_fields; i++) {
-                    std::cout << (row[i] ? row[i] : "NULL") << "\t";
-                }
-                std::cout << std::endl;
-            }
-
             std::cout << "MySQL connection established: " << i + 1 << std::endl;
             m_connectionPool.push(conn);
         }
